@@ -1,6 +1,6 @@
 {
-  "name": "MedTracker",
-  "short_name": "MedTrack",
+  "name": "MyPillbox",
+  "short_name": "MyPillbox",
   "description": "Track your medication doses",
   "start_url": "/index.html",
   "display": "standalone",
