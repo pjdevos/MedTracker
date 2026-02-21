@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>MedTracker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f7f6;
+      --white: #ffffff;
+      --green: #3dae7c;
+      --green-light: #eaf7f1;
+      --green-mid: #c2ead7;
+      --orange: #f59b2b;
+      --orange-light: #fff4e0;
+      --red: #e05252;
+      --red-light: #fdeaea;
+      --text: #1a1a1a;
+      --muted: #9aacaa;
+      --border: #ebebeb;
+      --shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      background: var(--white);
+      padding: 16px 20px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 12px; }
+
+    .avatar {
+      width: 38px; height: 38px;
+      background: var(--green-light);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    .app-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+
+    .date-chip {
+      background: var(--green-light);
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+
+    main {
+      padding: 20px 16px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    .add-card {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+    }
+
+    .add-card .section-title { margin-bottom: 16px; }
+
+    .field-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 6px;
+    }
+
+    input {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: 'Nunito', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 11px 14px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.18s;
+    }
+
+    input:focus { border-color: var(--green); background: var(--white); }
+    input::placeholder { color: var(--muted); font-weight: 500; }
+
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-row { margin-bottom: 12px; }
+
+    .btn-add {
+      width: 100%;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background 0.15s, transform 0.1s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    .btn-add:active { transform: scale(0.98); background: #35a070; }
+
+    .med-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .med-card {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      animation: fadeUp 0.22s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .med-icon {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      background: var(--green-light);
+    }
+
+    .med-card.warn .med-icon { background: var(--orange-light); }
+    .med-card.danger .med-icon { background: var(--red-light); }
+
+    .med-body { flex: 1; min-width: 0; }
+
+    .med-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 3px;
+    }
+
+    .med-sub {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .med-sub .highlight { color: var(--green); }
+    .med-card.warn .med-sub .highlight { color: var(--orange); }
+    .med-card.danger .med-sub .highlight { color: var(--red); }
+
+    .progress {
+      height: 4px;
+      background: var(--border);
+      border-radius: 4px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--green);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+    .med-card.warn .progress-bar { background: var(--orange); }
+    .med-card.danger .progress-bar { background: var(--red); }
+
+    .med-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .dose-badge {
+      background: var(--green-light);
+      color: var(--green);
+      border-radius: 10px;
+      padding: 4px 10px;
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.2;
+      min-width: 52px;
+      text-align: center;
+    }
+
+    .med-card.warn .dose-badge { background: var(--orange-light); color: var(--orange); }
+    .med-card.danger .dose-badge { background: var(--red-light); color: var(--red); }
+
+    .dose-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .card-actions { display: flex; gap: 5px; }
+
+    .btn-icon {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 15px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      font-weight: 700;
+    }
+
+    .btn-icon:active { transform: scale(0.9); }
+    .btn-icon.plus:hover { border-color: var(--green); color: var(--green); background: var(--green-light); }
+    .btn-icon.minus:hover { border-color: #ccc; color: #555; }
+    .btn-icon.del:hover { border-color: var(--red); color: var(--red); background: var(--red-light); }
+
+    .empty {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--muted);
+    }
+
+    .empty-icon { font-size: 52px; display: block; margin-bottom: 12px; opacity: 0.5; }
+
+    .empty p { font-size: 14px; font-weight: 600; line-height: 1.7; }
+
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--text);
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 24px;
+      font-size: 13px;
+      font-weight: 700;
+      z-index: 100;
+      transition: transform 0.28s cubic-bezier(.34,1.56,.64,1);
+      white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    .install-banner {
+      background: var(--green-light);
+      border: 1.5px solid var(--green-mid);
+      border-radius: 16px;
+      padding: 13px 16px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .install-banner.hidden { display: none; }
+    .install-banner span { flex: 1; }
+    .btn-install {
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 7px 14px;
+      cursor: pointer;
+    }
+    .btn-close-banner { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="avatar">💊</div>
+    <div class="app-title">MedTracker</div>
+  </div>
+  <div class="date-chip" id="dateDisplay"></div>
+</header>
+
+<main>
+  <div class="install-banner hidden" id="installBanner">
+    <span>📲 Add to your home screen</span>
+    <button class="btn-install" id="installBtn">Install</button>
+    <button class="btn-close-banner" id="closeBanner">×</button>
+  </div>
+
+  <div class="add-card">
+    <div class="section-title">Add medication</div>
+    <div class="form-row">
+      <div class="field-label">Medication name</div>
+      <input type="text" id="medName" placeholder="e.g. Ibuprofen" maxlength="40">
+    </div>
+    <div class="form-grid-2 form-row">
+      <div>
+        <div class="field-label">Total doses</div>
+        <input type="number" id="medDoses" placeholder="e.g. 30" min="1" max="9999">
+      </div>
+      <div>
+        <div class="field-label">Doses per day</div>
+        <input type="number" id="medPerDay" value="1" min="1" max="10">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field-label">Warn when ≤ days left</div>
+      <input type="number" id="medWarn" value="7" min="1" max="60">
+    </div>
+    <button class="btn-add" onclick="addMed()">
+      <span style="font-size:18px">+</span> Add medication
+    </button>
+  </div>
+
+  <div class="section-title">Your medications</div>
+  <div class="med-list" id="cards">
+    <div class="empty" id="emptyState">
+      <span class="empty-icon">🌿</span>
+      <p>No medications yet.<br>Add your first one above.</p>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let meds = [];
+  let deferredPrompt = null;
+  const EMOJIS = ['💊','🔵','🟢','🟡','🟠','🔴','⬜','🟣'];
+
+  function save() { localStorage.setItem('medtracker_v2', JSON.stringify(meds)); }
+  function load() {
+    try { meds = JSON.parse(localStorage.getItem('medtracker_v2') || '[]'); }
+    catch { meds = []; }
+  }
+
+  function applyDailyDeductions() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let changed = false;
+    meds.forEach(m => {
+      const last = m.lastDeducted ? new Date(m.lastDeducted) : null;
+      if (!last) {
+        m.lastDeducted = today.toISOString();
+        changed = true;
+        return;
+      }
+      last.setHours(0, 0, 0, 0);
+      const missedDays = Math.floor((today - last) / 86400000);
+      if (missedDays > 0) {
+        m.doses = Math.max(0, m.doses - (m.perDay || 1) * missedDays);
+        m.lastDeducted = today.toISOString();
+        changed = true;
+      }
+    });
+    if (changed) save();
+  }
+
+  function daysLeft(m) { return m.perDay > 0 ? Math.floor(m.doses / m.perDay) : 0; }
+
+  function render() {
+    const container = document.getElementById('cards');
+    const empty = document.getElementById('emptyState');
+    if (meds.length === 0) {
+      container.innerHTML = '';
+      container.appendChild(empty);
+      return;
+    }
+    if (empty.parentNode) empty.parentNode.removeChild(empty);
+    container.innerHTML = '';
+    meds.forEach((med, i) => {
+      const days = daysLeft(med);
+      const warn = med.warn || 7;
+      const cls = days === 0 ? 'danger' : days <= warn ? 'warn' : '';
+      const pct = med.initialDoses > 0 ? Math.min(100, (med.doses / med.initialDoses) * 100) : 0;
+      const emoji = med.emoji || '💊';
+      const card = document.createElement('div');
+      card.className = `med-card ${cls}`;
+      card.innerHTML = `
+        <div class="med-icon">${emoji}</div>
+        <div class="med-body">
+          <div class="med-name">${esc(med.name)}</div>
+          <div class="med-sub">${med.perDay}× per day &nbsp;·&nbsp; <span class="highlight">${days} day${days !== 1 ? 's' : ''} left</span></div>
+          <div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div>
+        </div>
+        <div class="med-right">
+          <div><div class="dose-badge">${med.doses}</div><div class="dose-label">doses</div></div>
+          <div class="card-actions">
+            <button class="btn-icon plus" title="Refill" onclick="refill(${i})">+</button>
+            <button class="btn-icon minus" title="Take one" onclick="takeOne(${i})">−</button>
+            <button class="btn-icon del" title="Delete" onclick="deleteMed(${i})">✕</button>
+          </div>
+        </div>`;
+      container.appendChild(card);
+    });
+  }
+
+  function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function addMed() {
+    const name = document.getElementById('medName').value.trim();
+    const doses = parseInt(document.getElementById('medDoses').value);
+    const perDay = parseInt(document.getElementById('medPerDay').value) || 1;
+    const warn = parseInt(document.getElementById('medWarn').value) || 7;
+    if (!name) { toast('Please enter a name'); return; }
+    if (!doses || doses < 1) { toast('Please enter number of doses'); return; }
+    const emoji = EMOJIS[meds.length % EMOJIS.length];
+    const today = new Date().toDateString();
+    meds.push({ name, doses, initialDoses: doses, perDay, warn, emoji, lastDeducted: today });
+    save(); render();
+    document.getElementById('medName').value = '';
+    document.getElementById('medDoses').value = '';
+    toast(`${name} added ✓`);
+  }
+
+  function refill(i) {
+    const extra = parseInt(prompt(`How many doses to add to ${meds[i].name}?`) || '0');
+    if (extra > 0) {
+      meds[i].doses += extra;
+      meds[i].initialDoses = Math.max(meds[i].initialDoses, meds[i].doses);
+      save(); render();
+      toast(`+${extra} doses added`);
+    }
+  }
+
+  function takeOne(i) {
+    if (meds[i].doses > 0) { meds[i].doses--; save(); render(); }
+  }
+
+  function deleteMed(i) {
+    if (confirm(`Remove ${meds[i].name}?`)) { meds.splice(i, 1); save(); render(); }
+  }
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault(); deferredPrompt = e;
+    document.getElementById('installBanner').classList.remove('hidden');
+  });
+  document.getElementById('installBtn').addEventListener('click', () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(() => {
+        deferredPrompt = null;
+        document.getElementById('installBanner').classList.add('hidden');
+      });
+    }
+  });
+  document.getElementById('closeBanner').addEventListener('click', () => {
+    document.getElementById('installBanner').classList.add('hidden');
+  });
+  document.getElementById('medDoses').addEventListener('keydown', e => { if (e.key === 'Enter') addMed(); });
+
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }
+
+  document.getElementById('dateDisplay').textContent =
+    new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  load();
+  applyDailyDeductions();
+  render();
+</script>
+</body>
+</html>
