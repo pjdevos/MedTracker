@@ -342,6 +342,68 @@
       background: var(--green-light);
       transform: scale(1.12);
     }
+
+    .reminder-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      user-select: none;
+    }
+    .reminder-row.active { color: var(--green); }
+    .med-card.warn .reminder-row.active { color: var(--orange); }
+    .med-card.danger .reminder-row.active { color: var(--red); }
+    .reminder-row .bell { font-size: 13px; line-height: 1; }
+    .reminder-edit {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+    }
+    .reminder-edit.open { display: flex; }
+    .reminder-edit input[type="time"] {
+      flex: 1;
+      font-size: 13px;
+      padding: 7px 10px;
+      min-width: 0;
+    }
+    .btn-reminder-save {
+      font-family: 'Nunito', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 7px 11px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-reminder-clear {
+      font-family: 'Nunito', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 7px 9px;
+      background: transparent;
+      color: var(--muted);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .field-note {
+      text-transform: none;
+      font-weight: 500;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0;
+    }
   </style>
 </head>
 <body>
@@ -392,6 +454,10 @@
     <div class="form-row">
       <div class="field-label">Warn when ≤ days left</div>
       <input type="number" id="medWarn" value="7" min="1" max="60">
+    </div>
+    <div class="form-row">
+      <div class="field-label">Daily reminder <span class="field-note">(optional)</span></div>
+      <input type="time" id="medReminder">
     </div>
     <button class="btn-add" onclick="addMed()">
       <span style="font-size:18px">+</span> Add medication
@@ -471,12 +537,24 @@
       const emoji = med.emoji || '💊';
       const card = document.createElement('div');
       card.className = `med-card ${cls}`;
+      const reminderActive = med.reminderTime ? ' active' : '';
+      const bellIcon = med.reminderTime ? '🔔' : '🔕';
+      const reminderLabel = med.reminderTime ? formatTime(med.reminderTime) : 'Add reminder';
       card.innerHTML = `
         <div class="med-icon">${emoji}</div>
         <div class="med-body">
           <div class="med-name">${esc(med.name)}</div>
           <div class="med-sub">${med.perDay}× per day &nbsp;·&nbsp; <span class="highlight">${days} day${days !== 1 ? 's' : ''} left</span></div>
           <div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div>
+          <div class="reminder-row${reminderActive}" onclick="toggleReminder(${i})">
+            <span class="bell">${bellIcon}</span>
+            <span class="reminder-label">${reminderLabel}</span>
+          </div>
+          <div class="reminder-edit" id="reminder-edit-${i}">
+            <input type="time" id="reminder-time-${i}" value="${med.reminderTime || ''}">
+            <button class="btn-reminder-save" onclick="saveReminder(${i})">Save</button>
+            <button class="btn-reminder-clear" onclick="clearReminder(${i})">Clear</button>
+          </div>
         </div>
         <div class="med-right">
           <div><div class="dose-badge">${med.doses}</div><div class="dose-label">doses</div></div>
@@ -497,15 +575,18 @@
     const doses = parseInt(document.getElementById('medDoses').value);
     const perDay = parseInt(document.getElementById('medPerDay').value) || 1;
     const warn = parseInt(document.getElementById('medWarn').value) || 7;
+    const reminder = document.getElementById('medReminder').value || null;
     if (!name) { toast('Please enter a name'); return; }
     if (!doses || doses < 1) { toast('Please enter number of doses'); return; }
     const emoji = selectedEmoji;
     const today = new Date().toDateString();
-    meds.push({ name, doses, initialDoses: doses, perDay, warn, emoji, lastDeducted: today });
+    meds.push({ name, doses, initialDoses: doses, perDay, warn, emoji, lastDeducted: today, reminderTime: reminder, lastReminderDate: null });
     save(); render();
     document.getElementById('medName').value = '';
     document.getElementById('medDoses').value = '';
+    document.getElementById('medReminder').value = '';
     toast(`${name} added ✓`);
+    if (reminder) requestNotifPermission();
   }
 
   function refill(i) {
@@ -524,6 +605,66 @@
 
   function deleteMed(i) {
     if (confirm(`Remove ${meds[i].name}?`)) { meds.splice(i, 1); save(); render(); }
+  }
+
+  function formatTime(t) {
+    if (!t) return '';
+    const [h, m] = t.split(':');
+    const hour = parseInt(h);
+    return `${hour % 12 || 12}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
+  }
+
+  function toggleReminder(i) {
+    const el = document.getElementById(`reminder-edit-${i}`);
+    if (el) el.classList.toggle('open');
+  }
+
+  async function saveReminder(i) {
+    const timeInput = document.getElementById(`reminder-time-${i}`);
+    if (!timeInput || !timeInput.value) { toast('Please select a time'); return; }
+    const granted = await requestNotifPermission();
+    if (!granted) return;
+    meds[i].reminderTime = timeInput.value;
+    meds[i].lastReminderDate = null;
+    save(); render();
+    toast(`Reminder set for ${formatTime(timeInput.value)}`);
+  }
+
+  function clearReminder(i) {
+    meds[i].reminderTime = null;
+    meds[i].lastReminderDate = null;
+    save(); render();
+    toast('Reminder removed');
+  }
+
+  async function requestNotifPermission() {
+    if (!('Notification' in window)) { toast('Notifications not supported'); return false; }
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'denied') { toast('Notifications blocked — enable in browser settings'); return false; }
+    const result = await Notification.requestPermission();
+    if (result !== 'granted') toast('Notification permission denied');
+    return result === 'granted';
+  }
+
+  function checkReminders() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const now = new Date();
+    const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const today = now.toDateString();
+    let changed = false;
+    meds.forEach((m, i) => {
+      if (!m.reminderTime || m.reminderTime !== currentTime) return;
+      if (m.lastReminderDate === today) return;
+      meds[i].lastReminderDate = today;
+      changed = true;
+      const n = new Notification(`Time to take ${m.name}`, {
+        body: `${m.emoji} ${m.doses} dose${m.doses !== 1 ? 's' : ''} remaining`,
+        icon: '/icon.svg',
+        tag: `medtracker-${m.name}`,
+      });
+      n.onclick = () => { window.focus(); n.close(); };
+    });
+    if (changed) save();
   }
 
   function toast(msg) {
@@ -563,6 +704,8 @@
   applyDailyDeductions();
   initEmojiPicker();
   render();
+  setInterval(checkReminders, 30000);
+  checkReminders();
 </script>
 </body>
 </html>
