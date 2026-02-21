@@ -324,6 +324,24 @@
       cursor: pointer;
     }
     .btn-close-banner { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; }
+
+    .emoji-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .emoji-btn {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      line-height: 1;
+    }
+    .emoji-btn.selected {
+      border-color: var(--green);
+      background: var(--green-light);
+      transform: scale(1.12);
+    }
   </style>
 </head>
 <body>
@@ -348,6 +366,10 @@
     <div class="form-row">
       <div class="field-label">Medication name</div>
       <input type="text" id="medName" placeholder="e.g. Ibuprofen" maxlength="40">
+    </div>
+    <div class="form-row">
+      <div class="field-label">Icon</div>
+      <div class="emoji-row" id="emojiPicker"></div>
     </div>
     <div class="form-grid-2 form-row">
       <div>
@@ -382,7 +404,24 @@
 <script>
   let meds = [];
   let deferredPrompt = null;
-  const EMOJIS = ['💊','🔵','🟢','🟡','🟠','🔴','⬜','🟣'];
+  let selectedEmoji = '💊';
+  const EMOJIS = ['💊','💧','⚪','💉','🔵','🟢','🟡','🩸','🔆','🧴','🍶'];
+
+  function initEmojiPicker() {
+    const picker = document.getElementById('emojiPicker');
+    EMOJIS.forEach(emoji => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'emoji-btn' + (emoji === selectedEmoji ? ' selected' : '');
+      btn.textContent = emoji;
+      btn.addEventListener('click', () => {
+        selectedEmoji = emoji;
+        picker.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+      });
+      picker.appendChild(btn);
+    });
+  }
 
   function save() { localStorage.setItem('medtracker_v2', JSON.stringify(meds)); }
   function load() {
@@ -460,7 +499,7 @@
     const warn = parseInt(document.getElementById('medWarn').value) || 7;
     if (!name) { toast('Please enter a name'); return; }
     if (!doses || doses < 1) { toast('Please enter number of doses'); return; }
-    const emoji = EMOJIS[meds.length % EMOJIS.length];
+    const emoji = selectedEmoji;
     const today = new Date().toDateString();
     meds.push({ name, doses, initialDoses: doses, perDay, warn, emoji, lastDeducted: today });
     save(); render();
@@ -512,12 +551,17 @@
   });
   document.getElementById('medDoses').addEventListener('keydown', e => { if (e.key === 'Enter') addMed(); });
 
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) { applyDailyDeductions(); render(); }
+  });
+
   if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }
 
   document.getElementById('dateDisplay').textContent =
     new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   load();
   applyDailyDeductions();
+  initEmojiPicker();
   render();
 </script>
 </body>
