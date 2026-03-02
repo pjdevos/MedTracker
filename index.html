@@ -489,7 +489,31 @@
     });
   }
 
-  function save() { localStorage.setItem('medtracker_v2', JSON.stringify(meds)); }
+  function save() {
+    localStorage.setItem('medtracker_v2', JSON.stringify(meds));
+    syncToSW();
+  }
+
+  // Stuurt medicatiedata naar de service worker zodat hij kan notificeren
+  // ook als de app op de achtergrond staat of gesloten is.
+  async function syncToSW() {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg.active) reg.active.postMessage({ type: 'SYNC_MEDS', meds });
+    } catch {}
+  }
+
+  // Registreert Periodic Background Sync (Chrome Android, PWA geïnstalleerd).
+  async function registerPeriodicSync() {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      if (!('periodicSync' in reg)) return;
+      await reg.periodicSync.register('check-reminders', { minInterval: 60 * 60 * 1000 });
+    } catch {}
+  }
+
   function load() {
     try { meds = JSON.parse(localStorage.getItem('medtracker_v2') || '[]'); }
     catch { meds = []; }
@@ -706,6 +730,8 @@
   render();
   setInterval(checkReminders, 30000);
   checkReminders();
+  syncToSW();          // stuur huidige meds meteen naar de service worker
+  registerPeriodicSync(); // activeer achtergrond-sync (vereist geïnstalleerde PWA)
 </script>
 </body>
 </html>
