@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
@@ -51,6 +51,7 @@
     }
 
     .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
 
     .avatar {
       width: 38px; height: 38px;
@@ -65,6 +66,33 @@
       font-weight: 800;
       color: var(--text);
       letter-spacing: -0.3px;
+    }
+
+    .lang-toggle {
+      display: flex;
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .lang-btn {
+      background: none;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+
+    .lang-btn.active {
+      background: var(--white);
+      color: var(--green);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.10);
     }
 
     .date-chip {
@@ -413,61 +441,192 @@
     <div class="avatar">💊</div>
     <div class="app-title">MyPillbox</div>
   </div>
-  <div class="date-chip" id="dateDisplay"></div>
+  <div class="header-right">
+    <div class="lang-toggle">
+      <button class="lang-btn" data-lang="nl" onclick="setLang('nl')">NL</button>
+      <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+    </div>
+    <div class="date-chip" id="dateDisplay"></div>
+  </div>
 </header>
 
 <main>
   <div class="install-banner hidden" id="installBanner">
-    <span>📲 Add to your home screen</span>
-    <button class="btn-install" id="installBtn">Install</button>
+    <span id="installBannerText"></span>
+    <button class="btn-install" id="installBtn"></button>
     <button class="btn-close-banner" id="closeBanner">×</button>
   </div>
 
-  <div class="section-title">Your medications</div>
+  <div class="section-title" id="medsTitle"></div>
   <div class="med-list" id="cards">
     <div class="empty" id="emptyState">
       <span class="empty-icon">🌿</span>
-      <p>No medications yet.<br>Add your first one below.</p>
+      <p id="emptyText"></p>
     </div>
   </div>
 
   <div class="add-card">
-    <div class="section-title">Add medication</div>
+    <div class="section-title" id="addMedTitle"></div>
     <div class="form-row">
-      <div class="field-label">Medication name</div>
-      <input type="text" id="medName" placeholder="e.g. Ibuprofen" maxlength="40">
+      <div class="field-label" id="labelMedName"></div>
+      <input type="text" id="medName" maxlength="40">
     </div>
     <div class="form-row">
-      <div class="field-label">Icon</div>
+      <div class="field-label" id="labelIcon"></div>
       <div class="emoji-row" id="emojiPicker"></div>
     </div>
     <div class="form-grid-2 form-row">
       <div>
-        <div class="field-label">Total doses</div>
-        <input type="number" id="medDoses" placeholder="e.g. 30" min="1" max="9999">
+        <div class="field-label" id="labelTotalDoses"></div>
+        <input type="number" id="medDoses" min="1" max="9999">
       </div>
       <div>
-        <div class="field-label">Doses per day</div>
+        <div class="field-label" id="labelPerDay"></div>
         <input type="number" id="medPerDay" value="1" min="1" max="10">
       </div>
     </div>
     <div class="form-row">
-      <div class="field-label">Warn when ≤ days left</div>
+      <div class="field-label" id="labelWarn"></div>
       <input type="number" id="medWarn" value="7" min="1" max="60">
     </div>
     <div class="form-row">
-      <div class="field-label">Daily reminder <span class="field-note">(optional)</span></div>
+      <div class="field-label" id="labelReminder"></div>
       <input type="time" id="medReminder">
     </div>
-    <button class="btn-add" onclick="addMed()">
-      <span style="font-size:18px">+</span> Add medication
-    </button>
+    <button class="btn-add" id="btnAdd" onclick="addMed()"></button>
   </div>
 </main>
 
 <div class="toast" id="toast"></div>
 
 <script>
+  // ── Vertalingen ────────────────────────────────────────────────────────────
+  const T = {
+    nl: {
+      installBanner:    '📲 Voeg toe aan startscherm',
+      install:          'Installeren',
+      myMeds:           'Jouw medicatie',
+      emptyText:        'Nog geen medicatie.<br>Voeg je eerste toe hieronder.',
+      addMed:           'Medicatie toevoegen',
+      medName:          'Naam medicatie',
+      medNamePh:        'bijv. Ibuprofen',
+      icon:             'Icoon',
+      totalDoses:       'Totaal dosissen',
+      dosesPh:          'bijv. 30',
+      perDayLabel:      'Dosissen per dag',
+      warnDays:         'Waarschuw bij ≤ dagen over',
+      reminder:         'Dagelijkse herinnering',
+      optional:         '(optioneel)',
+      addBtn:           'Medicatie toevoegen',
+      perDayCard:       n => `${n}× per dag`,
+      daysLeft:         n => `${n} dag${n !== 1 ? 'en' : ''} over`,
+      addReminder:      'Herinnering instellen',
+      doses:            'dosissen',
+      save:             'Opslaan',
+      clear:            'Wissen',
+      refillTitle:      'Aanvullen',
+      takeOneTitle:     'Neem één',
+      deleteTitle:      'Verwijderen',
+      enterName:        'Vul een naam in',
+      enterDoses:       'Vul het aantal dosissen in',
+      added:            name => `${name} toegevoegd ✓`,
+      refillPrompt:     name => `Hoeveel dosissen toevoegen aan ${name}?`,
+      dosesAdded:       n => `+${n} dosissen toegevoegd`,
+      removePrompt:     name => `${name} verwijderen?`,
+      selectTime:       'Selecteer een tijdstip',
+      reminderSet:      time => `Herinnering ingesteld voor ${time}`,
+      reminderCleared:  'Herinnering verwijderd',
+      notifNone:        'Meldingen worden niet ondersteund',
+      notifBlocked:     'Meldingen geblokkeerd — schakel in via browserinstellingen',
+      notifDenied:      'Toestemming voor meldingen geweigerd',
+      notifTitle:       name => `Tijd om ${name} te nemen`,
+      notifBody:        (emoji, n) => `${emoji} Nog ${n} dosis${n !== 1 ? 's' : ''} over`,
+      dateLocale:       'nl-BE',
+    },
+    en: {
+      installBanner:    '📲 Add to your home screen',
+      install:          'Install',
+      myMeds:           'Your medications',
+      emptyText:        'No medications yet.<br>Add your first one below.',
+      addMed:           'Add medication',
+      medName:          'Medication name',
+      medNamePh:        'e.g. Ibuprofen',
+      icon:             'Icon',
+      totalDoses:       'Total doses',
+      dosesPh:          'e.g. 30',
+      perDayLabel:      'Doses per day',
+      warnDays:         'Warn when ≤ days left',
+      reminder:         'Daily reminder',
+      optional:         '(optional)',
+      addBtn:           'Add medication',
+      perDayCard:       n => `${n}× per day`,
+      daysLeft:         n => `${n} day${n !== 1 ? 's' : ''} left`,
+      addReminder:      'Add reminder',
+      doses:            'doses',
+      save:             'Save',
+      clear:            'Clear',
+      refillTitle:      'Refill',
+      takeOneTitle:     'Take one',
+      deleteTitle:      'Delete',
+      enterName:        'Please enter a name',
+      enterDoses:       'Please enter number of doses',
+      added:            name => `${name} added ✓`,
+      refillPrompt:     name => `How many doses to add to ${name}?`,
+      dosesAdded:       n => `+${n} doses added`,
+      removePrompt:     name => `Remove ${name}?`,
+      selectTime:       'Please select a time',
+      reminderSet:      time => `Reminder set for ${time}`,
+      reminderCleared:  'Reminder removed',
+      notifNone:        'Notifications not supported',
+      notifBlocked:     'Notifications blocked — enable in browser settings',
+      notifDenied:      'Notification permission denied',
+      notifTitle:       name => `Time to take ${name}`,
+      notifBody:        (emoji, n) => `${emoji} ${n} dose${n !== 1 ? 's' : ''} remaining`,
+      dateLocale:       'en-GB',
+    },
+  };
+
+  // ── Taal ───────────────────────────────────────────────────────────────────
+  let lang = localStorage.getItem('medtracker_lang') || 'nl';
+
+  function t(key, ...args) {
+    const val = T[lang][key];
+    return typeof val === 'function' ? val(...args) : val;
+  }
+
+  function setLang(l) {
+    lang = l;
+    localStorage.setItem('medtracker_lang', l);
+    document.documentElement.lang = l;
+    applyLang();
+    render();
+  }
+
+  function applyLang() {
+    document.getElementById('installBannerText').textContent  = t('installBanner');
+    document.getElementById('installBtn').textContent         = t('install');
+    document.getElementById('medsTitle').textContent          = t('myMeds');
+    document.getElementById('emptyText').innerHTML            = t('emptyText');
+    document.getElementById('addMedTitle').textContent        = t('addMed');
+    document.getElementById('labelMedName').textContent       = t('medName');
+    document.getElementById('medName').placeholder            = t('medNamePh');
+    document.getElementById('labelIcon').textContent          = t('icon');
+    document.getElementById('labelTotalDoses').textContent    = t('totalDoses');
+    document.getElementById('medDoses').placeholder           = t('dosesPh');
+    document.getElementById('labelPerDay').textContent        = t('perDayLabel');
+    document.getElementById('labelWarn').textContent          = t('warnDays');
+    document.getElementById('labelReminder').innerHTML =
+      `${t('reminder')} <span class="field-note">${t('optional')}</span>`;
+    document.getElementById('btnAdd').innerHTML =
+      `<span style="font-size:18px">+</span> ${t('addBtn')}`;
+    document.getElementById('dateDisplay').textContent =
+      new Date().toLocaleDateString(t('dateLocale'), { weekday: 'short', day: 'numeric', month: 'short' });
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+  }
+
+  // ── Data ───────────────────────────────────────────────────────────────────
   let meds = [];
   let deferredPrompt = null;
   let selectedEmoji = '💊';
@@ -563,12 +722,12 @@
       card.className = `med-card ${cls}`;
       const reminderActive = med.reminderTime ? ' active' : '';
       const bellIcon = med.reminderTime ? '🔔' : '🔕';
-      const reminderLabel = med.reminderTime ? formatTime(med.reminderTime) : 'Add reminder';
+      const reminderLabel = med.reminderTime ? formatTime(med.reminderTime) : t('addReminder');
       card.innerHTML = `
         <div class="med-icon">${emoji}</div>
         <div class="med-body">
           <div class="med-name">${esc(med.name)}</div>
-          <div class="med-sub">${med.perDay}× per day &nbsp;·&nbsp; <span class="highlight">${days} day${days !== 1 ? 's' : ''} left</span></div>
+          <div class="med-sub">${t('perDayCard', med.perDay)} &nbsp;·&nbsp; <span class="highlight">${t('daysLeft', days)}</span></div>
           <div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div>
           <div class="reminder-row${reminderActive}" onclick="toggleReminder(${i})">
             <span class="bell">${bellIcon}</span>
@@ -576,16 +735,16 @@
           </div>
           <div class="reminder-edit" id="reminder-edit-${i}">
             <input type="time" id="reminder-time-${i}" value="${med.reminderTime || ''}">
-            <button class="btn-reminder-save" onclick="saveReminder(${i})">Save</button>
-            <button class="btn-reminder-clear" onclick="clearReminder(${i})">Clear</button>
+            <button class="btn-reminder-save" onclick="saveReminder(${i})">${t('save')}</button>
+            <button class="btn-reminder-clear" onclick="clearReminder(${i})">${t('clear')}</button>
           </div>
         </div>
         <div class="med-right">
-          <div><div class="dose-badge">${med.doses}</div><div class="dose-label">doses</div></div>
+          <div><div class="dose-badge">${med.doses}</div><div class="dose-label">${t('doses')}</div></div>
           <div class="card-actions">
-            <button class="btn-icon plus" title="Refill" onclick="refill(${i})">+</button>
-            <button class="btn-icon minus" title="Take one" onclick="takeOne(${i})">−</button>
-            <button class="btn-icon del" title="Delete" onclick="deleteMed(${i})">✕</button>
+            <button class="btn-icon plus" title="${t('refillTitle')}" onclick="refill(${i})">+</button>
+            <button class="btn-icon minus" title="${t('takeOneTitle')}" onclick="takeOne(${i})">−</button>
+            <button class="btn-icon del" title="${t('deleteTitle')}" onclick="deleteMed(${i})">✕</button>
           </div>
         </div>`;
       container.appendChild(card);
@@ -600,8 +759,8 @@
     const perDay = parseInt(document.getElementById('medPerDay').value) || 1;
     const warn = parseInt(document.getElementById('medWarn').value) || 7;
     const reminder = document.getElementById('medReminder').value || null;
-    if (!name) { toast('Please enter a name'); return; }
-    if (!doses || doses < 1) { toast('Please enter number of doses'); return; }
+    if (!name) { toast(t('enterName')); return; }
+    if (!doses || doses < 1) { toast(t('enterDoses')); return; }
     const emoji = selectedEmoji;
     const today = new Date().toDateString();
     meds.push({ name, doses, initialDoses: doses, perDay, warn, emoji, lastDeducted: today, reminderTime: reminder, lastReminderDate: null });
@@ -609,17 +768,17 @@
     document.getElementById('medName').value = '';
     document.getElementById('medDoses').value = '';
     document.getElementById('medReminder').value = '';
-    toast(`${name} added ✓`);
+    toast(t('added', name));
     if (reminder) requestNotifPermission();
   }
 
   function refill(i) {
-    const extra = parseInt(prompt(`How many doses to add to ${meds[i].name}?`) || '0');
+    const extra = parseInt(prompt(t('refillPrompt', meds[i].name)) || '0');
     if (extra > 0) {
       meds[i].doses += extra;
       meds[i].initialDoses = Math.max(meds[i].initialDoses, meds[i].doses);
       save(); render();
-      toast(`+${extra} doses added`);
+      toast(t('dosesAdded', extra));
     }
   }
 
@@ -628,12 +787,13 @@
   }
 
   function deleteMed(i) {
-    if (confirm(`Remove ${meds[i].name}?`)) { meds.splice(i, 1); save(); render(); }
+    if (confirm(t('removePrompt', meds[i].name))) { meds.splice(i, 1); save(); render(); }
   }
 
-  function formatTime(t) {
-    if (!t) return '';
-    const [h, m] = t.split(':');
+  function formatTime(time) {
+    if (!time) return '';
+    if (lang === 'nl') return time; // Nederland/België: 24-uursnotatie
+    const [h, m] = time.split(':');
     const hour = parseInt(h);
     return `${hour % 12 || 12}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
   }
@@ -645,28 +805,28 @@
 
   async function saveReminder(i) {
     const timeInput = document.getElementById(`reminder-time-${i}`);
-    if (!timeInput || !timeInput.value) { toast('Please select a time'); return; }
+    if (!timeInput || !timeInput.value) { toast(t('selectTime')); return; }
     const granted = await requestNotifPermission();
     if (!granted) return;
     meds[i].reminderTime = timeInput.value;
     meds[i].lastReminderDate = null;
     save(); render();
-    toast(`Reminder set for ${formatTime(timeInput.value)}`);
+    toast(t('reminderSet', formatTime(timeInput.value)));
   }
 
   function clearReminder(i) {
     meds[i].reminderTime = null;
     meds[i].lastReminderDate = null;
     save(); render();
-    toast('Reminder removed');
+    toast(t('reminderCleared'));
   }
 
   async function requestNotifPermission() {
-    if (!('Notification' in window)) { toast('Notifications not supported'); return false; }
+    if (!('Notification' in window)) { toast(t('notifNone')); return false; }
     if (Notification.permission === 'granted') return true;
-    if (Notification.permission === 'denied') { toast('Notifications blocked — enable in browser settings'); return false; }
+    if (Notification.permission === 'denied') { toast(t('notifBlocked')); return false; }
     const result = await Notification.requestPermission();
-    if (result !== 'granted') toast('Notification permission denied');
+    if (result !== 'granted') toast(t('notifDenied'));
     return result === 'granted';
   }
 
@@ -681,8 +841,8 @@
       if (m.lastReminderDate === today) return;
       meds[i].lastReminderDate = today;
       changed = true;
-      const n = new Notification(`Time to take ${m.name}`, {
-        body: `${m.emoji} ${m.doses} dose${m.doses !== 1 ? 's' : ''} remaining`,
+      const n = new Notification(t('notifTitle', m.name), {
+        body: t('notifBody', m.emoji, m.doses),
         icon: '/icon.svg',
         tag: `medtracker-${m.name}`,
       });
@@ -692,12 +852,13 @@
   }
 
   function toast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2200);
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2200);
   }
 
+  // ── Events ─────────────────────────────────────────────────────────────────
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault(); deferredPrompt = e;
     document.getElementById('installBanner').classList.remove('hidden');
@@ -720,18 +881,18 @@
     if (!document.hidden) { applyDailyDeductions(); render(); }
   });
 
+  // ── Opstarten ──────────────────────────────────────────────────────────────
   if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }
 
-  document.getElementById('dateDisplay').textContent =
-    new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   load();
   applyDailyDeductions();
   initEmojiPicker();
+  applyLang();   // teksten + datumweergave instellen
   render();
   setInterval(checkReminders, 30000);
   checkReminders();
-  syncToSW();          // stuur huidige meds meteen naar de service worker
-  registerPeriodicSync(); // activeer achtergrond-sync (vereist geïnstalleerde PWA)
+  syncToSW();
+  registerPeriodicSync();
 </script>
 </body>
 </html>
